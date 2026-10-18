@@ -37,6 +37,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Run Supabase security regression tests
+        run: node --test tests/*.test.mjs
+
       - name: Validate deployment configuration
         shell: bash
         run: |
