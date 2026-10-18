@@ -19,6 +19,15 @@ This project is a static HTML site. The added login/account pages use Supabase A
 - Configure rate limits, email delivery, abuse monitoring, and MFA as appropriate for the risk profile.
 - Do not expose auth tokens in URLs, logs, analytics, or error messages.
 
+## Hostinger static deployment
+
+The optional `.github/workflows/deploy-hostinger.yml` workflow deploys static files using FTPS with certificate verification. Configure these values in the GitHub Actions environment named `production`:
+
+- Secrets: `HOSTINGER_FTP_SERVER`, `HOSTINGER_FTP_USERNAME`, `HOSTINGER_FTP_PASSWORD`.
+- Variable: `HOSTINGER_FTP_SERVER_DIR`, an absolute remote directory ending in `/`.
+
+Use the actual Hostinger FTP hostname and destination path from hPanel; do not guess the production directory. The workflow validates the hostname/path, checks required pages, and does not use remote-delete synchronization. It does not run successfully until the environment is configured. Never store FTP credentials in Git or expose them in logs.
+
 ## AWS deployment
 
 The deployment workflow now requests short-lived AWS credentials via GitHub OIDC instead of static AWS access-key secrets. Configure these GitHub Actions **repository/environment variables**:
