@@ -30,6 +30,8 @@ jobs:
         run: |
           node --check auth-client.js
           node --check auth-config.js
+      - name: Check inline authentication module syntax
+        run: node scripts/validate-inline-modules.mjs
       - name: Check required static pages
         run: |
           test -s index.html
