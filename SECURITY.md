@@ -19,21 +19,13 @@ This project is a static HTML site. The added login/account pages use Supabase A
 - Configure rate limits, email delivery, abuse monitoring, and MFA as appropriate for the risk profile.
 - Do not expose auth tokens in URLs, logs, analytics, or error messages.
 
-## AWS deployment
+## AWS S3 + CloudFront deployment
 
-The deployment workflow now requests short-lived AWS credentials via GitHub OIDC instead of static AWS access-key secrets. Configure these GitHub Actions **repository/environment variables**:
+The workflow `.github/workflows/aws.yml` deploys the static site to a private S3 bucket and invalidates CloudFront using short-lived GitHub OIDC credentials. The CloudFormation template at `infra/static-site.yml` provisions the bucket, CloudFront OAC, and baseline security response headers. Review the template and deploy it to your AWS account before enabling deployment.
 
-- `AWS_REGION`
-- `AWS_ROLE_ARN`
-- `ECR_REPOSITORY`
-- `ECS_SERVICE`
-- `ECS_CLUSTER`
-- `ECS_TASK_DEFINITION` (path inside the repository)
-- `CONTAINER_NAME`
+Set GitHub `production` environment variables: `AWS_REGION`, `AWS_ROLE_ARN`, `S3_BUCKET`, `CLOUDFRONT_DISTRIBUTION_ID`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY`. The public Supabase publishable/anon key is injected into `auth-config.js` at deploy time and is not committed. Never use a service-role key in the browser.
 
-Configure the AWS IAM OIDC provider for `https://token.actions.githubusercontent.com`, audience `sts.amazonaws.com`, and an IAM role trust policy scoped to this repository, the `main` branch, and the `production` environment as appropriate. Grant only the permissions required for ECR push and ECS task-definition/service deployment.
-
-The workflow intentionally fails before deployment until all variables are configured and both `Dockerfile` and the ECS task-definition file exist. The current repository is static HTML and does not currently contain a Dockerfile or ECS task definition. Decide whether ECS is actually the target; for static hosting, a static deployment (for example, S3 + CloudFront or GitHub Pages) is simpler.
+Configure the AWS IAM OIDC provider (`https://token.actions.githubusercontent.com`, audience `sts.amazonaws.com`) and restrict the role trust policy to this repository, branch `main`, and the `production` environment. Grant only `s3:ListBucket` and required `s3:PutObject`/`s3:DeleteObject` permissions for the target bucket, plus `cloudfront:CreateInvalidation` for the specific distribution. Configure CloudFront origin access control and keep S3 public access blocked.
 
 ## Supabase data access
 
