@@ -8,7 +8,7 @@ test("browser Supabase configuration contains placeholders, not credentials", as
   const config = await read("../auth-config.js");
   assert.match(config, /YOUR_PROJECT_REF/);
   assert.match(config, /YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY/);
-  assert.doesNotMatch(config, /SUPABASE_(?:SERVICE_ROLE|SECRET_KEY)\\s*=/i);
+  assert.doesNotMatch(config, /SUPABASE_(?:SERVICE_ROLE|SECRET_KEY)=/i);
 });
 
 test("Supabase client validates project URL and safely disables invalid configuration", async () => {
