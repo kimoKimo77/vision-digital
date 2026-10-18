@@ -17,6 +17,13 @@
       <p id="userEmail" class="mt-1 break-all font-semibold"></p>
       <p class="mt-4 text-xs text-slate-400">تم التحقق من جلسة المصادقة عبر Supabase.</p>
     </div>
+    <form id="passwordForm" class="hidden mt-6 space-y-3 rounded-lg border border-slate-700 p-4">
+      <h2 class="font-semibold">اختيار كلمة مرور جديدة</h2>
+      <label class="block text-sm">كلمة المرور الجديدة
+        <input id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required class="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white">
+      </label>
+      <button id="updatePasswordBtn" class="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-3 font-semibold" type="submit">حفظ كلمة المرور</button>
+    </form>
     <button id="logoutBtn" class="hidden mt-6 rounded-lg bg-red-700 hover:bg-red-600 px-4 py-3 font-semibold" type="button">تسجيل الخروج</button>
   </main>
   <script type="module">
@@ -24,6 +31,9 @@
     const status = document.querySelector("#status");
     const details = document.querySelector("#accountDetails");
     const logoutBtn = document.querySelector("#logoutBtn");
+    const passwordForm = document.querySelector("#passwordForm");
+    const recoveryRequested = location.hash.includes("type=recovery");
+    const showPasswordForm = () => passwordForm.classList.remove("hidden");
     if (!authConfigured) {
       status.textContent = "خدمة المصادقة غير مضبوطة. راجع ملف auth-config.js.";
     } else {
@@ -42,9 +52,36 @@
         status.textContent = "تعذر التحقق من الجلسة. حاول تسجيل الدخول مجددًا.";
       } else {
         renderSession(session);
+        if (recoveryRequested) {
+          showPasswordForm();
+          status.textContent = "أدخل كلمة مرور جديدة لإكمال الاستعادة.";
+        }
       }
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "PASSWORD_RECOVERY") {
+          showPasswordForm();
+          status.textContent = "أدخل كلمة مرور جديدة لإكمال الاستعادة.";
+          return;
+        }
         if (!session) location.replace("./login.html");
+      });
+      passwordForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = document.querySelector("#updatePasswordBtn");
+        button.disabled = true;
+        try {
+          const { error } = await supabase.auth.updateUser({
+            password: document.querySelector("#newPassword").value
+          });
+          if (error) throw error;
+          passwordForm.reset();
+          passwordForm.classList.add("hidden");
+          status.textContent = "تم تحديث كلمة المرور بنجاح.";
+        } catch (error) {
+          status.textContent = error.message || "تعذر تحديث كلمة المرور.";
+        } finally {
+          button.disabled = false;
+        }
       });
       logoutBtn.addEventListener("click", async () => {
         logoutBtn.disabled = true;
