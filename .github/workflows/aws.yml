@@ -5,9 +5,13 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-# Minimal permissions by default. OIDC is used instead of long-lived AWS keys.
+# Least privilege by default. Only the deploy job receives an OIDC token.
 permissions:
   contents: read
+
+concurrency:
+  group: production-ecs-deploy
+  cancel-in-progress: false
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -22,6 +26,7 @@ jobs:
   deploy:
     name: Build and deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: production
     permissions:
       contents: read
@@ -29,25 +34,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Validate deployment configuration
         shell: bash
         run: |
           set -euo pipefail
           for name in AWS_REGION ECR_REPOSITORY ECS_SERVICE ECS_CLUSTER ECS_TASK_DEFINITION CONTAINER_NAME AWS_ROLE_ARN; do
-            if [[ -z "${!name:-}" || "${!name}" == *MY_* || "${!name}" == *YOUR_* ]]; then
-              echo "::error::Missing or placeholder repository variable: $name"
+            value="${!name:-}"
+            if [[ -z "$value" || "$value" == *MY_* || "$value" == *YOUR_* ]]; then
+              echo "::error::Missing or placeholder repository/environment variable: $name"
               exit 1
             fi
           done
+          if [[ ! "$AWS_ROLE_ARN" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
+            echo "::error::AWS_ROLE_ARN must be an IAM role ARN."
+            exit 1
+          fi
+          if [[ ! "$AWS_REGION" =~ ^[a-z]{2}(-gov)?-[a-z]+-[0-9]+$ ]]; then
+            echo "::error::AWS_REGION does not look like a valid AWS region."
+            exit 1
+          fi
           if [[ ! -f "$ECS_TASK_DEFINITION" ]]; then
             echo "::error::Task definition file not found: $ECS_TASK_DEFINITION"
             exit 1
           fi
           if [[ ! -f Dockerfile ]]; then
-            echo "::error::Dockerfile not found. This repository currently contains a static HTML site; add a reviewed Dockerfile or replace this workflow with the target static hosting deployment."
+            echo "::error::Dockerfile not found. This repository is currently a static HTML site; configure static hosting or add a reviewed container build before enabling ECS deployment."
             exit 1
           fi
+          node -e "JSON.parse(require('fs').readFileSync(process.env.ECS_TASK_DEFINITION, 'utf8'))"
 
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v6.3.0
@@ -55,6 +72,8 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: vision-digital-${{ github.run_id }}
+          role-duration-seconds: 900
+          mask-aws-account-id: true
 
       - name: Login to Amazon ECR
         id: login-ecr
