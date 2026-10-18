@@ -19,6 +19,7 @@
 ├── auth-config.js
 ├── SECURITY.md
 ├── .github/workflows/aws.yml
+├── infra/static-site.yml
 └── README.md
 ```
 
@@ -32,10 +33,14 @@
 
 **مهم:** صفحات HTML الثابتة لا تستطيع حماية محتوى خاص بمفردها. صفحة `account.html` توضح حالة الجلسة فقط؛ حماية البيانات تتطلب قواعد RLS وسياسات صلاحيات صحيحة في Supabase أو خادمًا خلفيًا موثوقًا.
 
-## تهيئة النشر إلى AWS
+## تهيئة النشر إلى AWS S3 + CloudFront
 
-سير العمل `.github/workflows/aws.yml` يتطلب متغيرات GitHub Actions التالية: `AWS_REGION`, `AWS_ROLE_ARN`, `ECR_REPOSITORY`, `ECS_SERVICE`, `ECS_CLUSTER`, `ECS_TASK_DEFINITION`, `CONTAINER_NAME`.
+الملف `infra/static-site.yml` ينشئ حاوية S3 خاصة، وCloudFront مع OAC، وتشفيرًا وتفعيل إصدارات الملفات ورؤوس أمان. راجع القالب قبل نشره في حسابك. بعد إنشاء المكدس، أضف قيم المخرجات إلى متغيرات بيئة GitHub `production`.
 
-يجب إعداد موفر OIDC ودور IAM محدود الصلاحيات في AWS. يفشل سير العمل عمدًا إذا كانت المتغيرات غير مهيأة أو لم يوجد `Dockerfile` وملف تعريف مهمة ECS. المستودع الحالي موقع HTML ثابت ولا يحتوي على هذين الملفين؛ حدّد أولًا ما إذا كان ECS مطلوبًا أم أن الاستضافة الثابتة أنسب.
+المتغيرات المطلوبة: `AWS_REGION`, `AWS_ROLE_ARN`, `S3_BUCKET`, `CLOUDFRONT_DISTRIBUTION_ID`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`. المفتاح الأخير مفتاح متصفح عام فقط؛ لا تستخدم `service_role`. يستخدم سير العمل OIDC، ويجري الاختبارات قبل أي نشر، ثم يزامن ملفات الموقع فقط ويبطل ذاكرة CloudFront المؤقتة.
 
-يوفر `supabase/schema.sql` مثالًا لجدول ملفات شخصية بسياسات RLS تقيد كل مستخدم ببياناته، وتُشغّل اختبارات التحقق الثابتة عبر `node --test tests/*.test.mjs`. هذه الاختبارات لا تستبدل اختبارات تكامل فعلية بمشروع Supabase مُهيأ.\n\nللتفاصيل الأمنية وخطوات الإعداد، راجع [SECURITY.md](./SECURITY.md).
+أنشئ دور IAM بصلاحيات محدودة إلى حاوية الموقع وتوزيعة CloudFront، وثبّت علاقة الثقة OIDC على هذا المستودع وفرع `main` وبيئة `production`. لا تُفعّل النشر حتى مراجعة سياسة الدور والقالب.
+
+يوفر `supabase/schema.sql` مثالًا لجدول ملفات شخصية بسياسات RLS تقيد كل مستخدم ببياناته، وتُشغّل اختبارات التحقق الثابتة عبر `node --test tests/*.test.mjs`. هذه الاختبارات لا تستبدل اختبارات تكامل فعلية بمشروع Supabase مُهيأ.
+
+للتفاصيل الأمنية وخطوات الإعداد، راجع [SECURITY.md](./SECURITY.md).
