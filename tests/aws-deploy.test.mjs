@@ -7,6 +7,8 @@ const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 test("AWS deployment uses S3 and CloudFront with OIDC, not ECS", async () => {
   const workflow = await read("../.github/workflows/aws.yml");
   assert.match(workflow, /id-token: write/);
+  assert.match(workflow, /pull_request:/);
+  assert.match(workflow, /if: github.event_name == .workflow_dispatch./);
   assert.match(workflow, /configure-aws-credentials/);
   assert.match(workflow, /aws s3 sync/);
   assert.match(workflow, /cloudfront create-invalidation/);
