@@ -37,7 +37,7 @@
 أُضيف سير العمل `.github/workflows/deploy-hostinger.yml` للنشر عبر FTPS مع التحقق من الشهادة، وفحص الإعدادات قبل النشر، وعدم حذف الملفات الموجودة على الخادم. لا ينفذ النشر إلا بعد دمج سير العمل إلى `main` أو تشغيله يدويًا، ويتطلب إعداد بيئة GitHub باسم `production`:
 
 - **Secrets:** `HOSTINGER_FTP_SERVER` (اسم المضيف فقط)، `HOSTINGER_FTP_USERNAME`، `HOSTINGER_FTP_PASSWORD`.
-- **Variable:** `HOSTINGER_FTP_SERVER_DIR` (المسار المطلق لمجلد الموقع؛ استخدم المسار الحقيقي الظاهر في hPanel ولا تفترض أن `/public_html/` صحيح).
+- **Variables:** `HOSTINGER_FTP_SERVER_DIR` (المسار المطلق الحقيقي لمجلد الموقع) و`HOSTINGER_DEPLOY_ENABLED=true` لتفعيل النشر صراحةً بعد التحقق من جميع القيم.
 
 لا تضع بيانات FTP في المستودع. سير العمل لا يحذف ملفات الوجهة، لكنه يرفع الملفات الأحدث إلى المجلد المحدد. لم يتم إجراء نشر فعلي بعد، لأن بيانات الاستضافة والمسار لم تُضبط في GitHub Actions.
 
