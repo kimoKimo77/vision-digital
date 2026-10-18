@@ -41,6 +41,8 @@ jobs:
           test -s account.html
           test -s supabase/schema.sql
           test -s infra/static-site.yml
+          node --check tests/auth-security.test.mjs
+          node --check tests/aws-deploy.test.mjs
       - name: Check tracked files for common secret filenames
         shell: bash
         run: |
