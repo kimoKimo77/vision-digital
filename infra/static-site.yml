@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Private S3 static website origin served securely through CloudFront OAC.
+
+Resources:
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  SiteOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-s3-oac"
+        Description: CloudFront-only access to the private static site bucket
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  SiteSecurityHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "${AWS::StackName}-security-headers"
+        Comment: Security headers for the static Vision Digital site
+        SecurityHeadersConfig:
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Preload: true
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: strict-origin-when-cross-origin
+            Override: true
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
+            Override: true
+
+  SiteDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Vision Digital static site
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: PrivateS3Origin
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt SiteOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: PrivateS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          ResponseHeadersPolicyId: !Ref SiteSecurityHeaders
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        IPV6Enabled: true
+      DependsOn:
+        - SiteBucketPolicy
+
+  SiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${SiteBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${SiteDistribution}"
+
+Outputs:
+  BucketName:
+    Description: Configure this value as GitHub production variable S3_BUCKET
+    Value: !Ref SiteBucket
+  DistributionId:
+    Description: Configure this value as GitHub production variable CLOUDFRONT_DISTRIBUTION_ID
+    Value: !Ref SiteDistribution
+  DistributionDomainName:
+    Description: CloudFront HTTPS domain; configure as Supabase Auth Site URL and redirect origin
+    Value: !GetAtt SiteDistribution.DomainName
