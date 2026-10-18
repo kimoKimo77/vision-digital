@@ -80,8 +80,6 @@ Resources:
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
         IPV6Enabled: true
-      DependsOn:
-        - SiteBucketPolicy
 
   SiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
