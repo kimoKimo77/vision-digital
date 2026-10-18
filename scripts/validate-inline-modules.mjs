@@ -7,7 +7,7 @@ const pages = ["login.html", "account.html"];
 let checked = 0;
 for (const page of pages) {
   const html = readFileSync(page, "utf8");
-  const modules = [...html.matchAll(/<script\\b[^>]*type=["']module["'][^>]*>([\\s\\S]*?)<\\/script>/gi)];
+  const modules = [...html.matchAll(/<script\b[^>]*type=["']module["'][^>]*>([\s\S]*?)<\/script>/gi)];
   if (modules.length === 0) {
     console.error(`No inline module script found in ${page}`);
     process.exitCode = 1;
@@ -20,7 +20,7 @@ for (const page of pages) {
       const result = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
       if (result.status !== 0) {
         console.error(`JavaScript syntax error in ${page} (module ${i + 1}):`);
-        process.stderr.write(result.stderr || result.stdout || "node --check failed\\n");
+        process.stderr.write(result.stderr || result.stdout || "node --check failed\n");
         process.exitCode = 1;
       } else {
         console.log(`Syntax OK: ${page} module ${i + 1}`);
