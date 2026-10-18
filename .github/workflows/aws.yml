@@ -1,6 +1,8 @@
 name: Deploy static site to AWS S3 and CloudFront
 
 on:
+  pull_request:
+    branches: ["main"]
   push:
     branches: ["main"]
   workflow_dispatch:
@@ -53,6 +55,7 @@ jobs:
           fi
 
   deploy:
+    if: github.event_name == 'workflow_dispatch'
     name: Deploy to private S3 origin behind CloudFront
     needs: validate
     runs-on: ubuntu-latest
