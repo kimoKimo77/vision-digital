@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>حسابي | رؤية الرقمية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+  <main class="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 sm:p-8">
+    <a href="./index.html" class="text-emerald-400 text-sm">← العودة إلى الموقع</a>
+    <h1 class="mt-5 text-2xl font-bold">حسابي</h1>
+    <p id="status" class="mt-4 text-slate-300" role="status" aria-live="polite">جارٍ التحقق من الجلسة…</p>
+    <div id="accountDetails" class="hidden mt-4 rounded-lg bg-slate-800 p-4">
+      <p class="text-sm text-slate-400">البريد الإلكتروني</p>
+      <p id="userEmail" class="mt-1 break-all font-semibold"></p>
+      <p class="mt-4 text-xs text-slate-400">تم التحقق من جلسة المصادقة عبر Supabase.</p>
+    </div>
+    <button id="logoutBtn" class="hidden mt-6 rounded-lg bg-red-700 hover:bg-red-600 px-4 py-3 font-semibold" type="button">تسجيل الخروج</button>
+  </main>
+  <script type="module">
+    import { supabase, authConfigured } from "./auth-client.js";
+    const status = document.querySelector("#status");
+    const details = document.querySelector("#accountDetails");
+    const logoutBtn = document.querySelector("#logoutBtn");
+    if (!authConfigured) {
+      status.textContent = "خدمة المصادقة غير مضبوطة. راجع ملف auth-config.js.";
+    } else {
+      const renderSession = (session) => {
+        if (!session) {
+          location.replace("./login.html");
+          return;
+        }
+        document.querySelector("#userEmail").textContent = session.user.email || "—";
+        details.classList.remove("hidden");
+        logoutBtn.classList.remove("hidden");
+        status.textContent = "تم تسجيل الدخول بنجاح.";
+      };
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        status.textContent = "تعذر التحقق من الجلسة. حاول تسجيل الدخول مجددًا.";
+      } else {
+        renderSession(session);
+      }
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (!session) location.replace("./login.html");
+      });
+      logoutBtn.addEventListener("click", async () => {
+        logoutBtn.disabled = true;
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          status.textContent = "تعذر تسجيل الخروج. حاول مرة أخرى.";
+          logoutBtn.disabled = false;
+        } else {
+          location.replace("./login.html");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
