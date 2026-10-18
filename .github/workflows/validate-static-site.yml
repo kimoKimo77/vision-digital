@@ -1,0 +1,48 @@
+name: Validate static site
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: static-site-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check auth-client.js
+          node --check auth-config.js
+      - name: Check inline authentication module syntax
+        run: node scripts/validate-inline-modules.mjs
+      - name: Check required static pages
+        run: |
+          test -s index.html
+          test -s login.html
+          test -s account.html
+          test -s SECURITY.md
+      - name: Check for accidentally tracked secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)(\.env($|\.)|secrets\.json$|.*\.(pem|key|p12)$)'; then
+            echo 'Potential secret/configuration file is tracked.' >&2
+            exit 1
+          fi
