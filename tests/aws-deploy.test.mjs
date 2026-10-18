@@ -21,7 +21,7 @@ test("deployment generates public Supabase config without committing credentials
   assert.match(workflow, /SUPABASE_URL/);
   assert.match(workflow, /SUPABASE_PUBLISHABLE_KEY/);
   assert.match(workflow, /writeFile\('auth-config\.js'/);
-  assert.match(workflow, /service-role key in the browser/i);
+  assert.match(workflow, /service-role keys here/i);
 });
 
 test("CloudFormation keeps S3 private and uses CloudFront OAC", async () => {
