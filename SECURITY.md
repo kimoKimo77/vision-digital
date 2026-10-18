@@ -6,7 +6,7 @@ This project is a static HTML site. The added login/account pages use Supabase A
 
 1. Create a Supabase project.
 2. In Authentication settings, configure the site URL and redirect URLs for the deployed site's exact HTTPS origin, including `/account.html`.
-3. Configure email confirmation and password reset behavior for the intended production policy.
+3. Explicitly enable **Email Confirmations** in Supabase Auth. Configure password reset behavior and verify that confirmation emails arrive before production use.
 4. Set the project's URL and **publishable/anon key** in `auth-config.js`. The browser key is public by design; never put a `service_role` key or other privileged secret in browser files or Git.
 5. Test signup, email confirmation, login, password reset, session refresh, and logout on the deployed HTTPS site.
 
