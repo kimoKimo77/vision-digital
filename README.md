@@ -32,6 +32,15 @@
 
 **مهم:** صفحات HTML الثابتة لا تستطيع حماية محتوى خاص بمفردها. صفحة `account.html` توضح حالة الجلسة فقط؛ حماية البيانات تتطلب قواعد RLS وسياسات صلاحيات صحيحة في Supabase أو خادمًا خلفيًا موثوقًا.
 
+## النشر إلى Hostinger (موقع ثابت)
+
+أُضيف سير العمل `.github/workflows/deploy-hostinger.yml` للنشر عبر FTPS مع التحقق من الشهادة، وفحص الإعدادات قبل النشر، وعدم حذف الملفات الموجودة على الخادم. لا ينفذ النشر إلا بعد دمج سير العمل إلى `main` أو تشغيله يدويًا، ويتطلب إعداد بيئة GitHub باسم `production`:
+
+- **Secrets:** `HOSTINGER_FTP_SERVER` (اسم المضيف فقط)، `HOSTINGER_FTP_USERNAME`، `HOSTINGER_FTP_PASSWORD`.
+- **Variable:** `HOSTINGER_FTP_SERVER_DIR` (المسار المطلق لمجلد الموقع؛ استخدم المسار الحقيقي الظاهر في hPanel ولا تفترض أن `/public_html/` صحيح).
+
+لا تضع بيانات FTP في المستودع. سير العمل لا يحذف ملفات الوجهة، لكنه يرفع الملفات الأحدث إلى المجلد المحدد. لم يتم إجراء نشر فعلي بعد، لأن بيانات الاستضافة والمسار لم تُضبط في GitHub Actions.
+
 ## تهيئة النشر إلى AWS
 
 سير العمل `.github/workflows/aws.yml` يتطلب متغيرات GitHub Actions التالية: `AWS_REGION`, `AWS_ROLE_ARN`, `ECR_REPOSITORY`, `ECS_SERVICE`, `ECS_CLUSTER`, `ECS_TASK_DEFINITION`, `CONTAINER_NAME`.
