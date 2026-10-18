@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="description" content="تسجيل الدخول أو إنشاء حساب في رؤية الرقمية">
+  <title>تسجيل الدخول | رؤية الرقمية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+  <main class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 sm:p-8 shadow-xl">
+    <a href="./index.html" class="text-emerald-400 text-sm">← العودة إلى الموقع</a>
+    <h1 class="mt-5 text-2xl font-bold">حساب رؤية الرقمية</h1>
+    <p class="mt-2 text-sm text-slate-400">سجّل الدخول أو أنشئ حسابًا جديدًا باستخدام بريدك الإلكتروني.</p>
+    <div id="configWarning" class="hidden mt-4 rounded-lg border border-amber-700 bg-amber-950/50 p-3 text-sm text-amber-200" role="alert">
+      لم تُضبط خدمة المصادقة بعد. راجع ملف auth-config.js وتعليمات README.
+    </div>
+    <form id="authForm" class="mt-6 space-y-4">
+      <label class="block text-sm">البريد الإلكتروني
+        <input id="email" type="email" autocomplete="email" required maxlength="254" class="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white">
+      </label>
+      <label class="block text-sm">كلمة المرور
+        <input id="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required class="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 p-3 text-white">
+      </label>
+      <p id="status" class="text-sm" role="status" aria-live="polite"></p>
+      <button id="submitBtn" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 px-4 py-3 font-semibold" type="submit">تسجيل الدخول</button>
+    </form>
+    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <button id="signupBtn" type="button" class="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800">إنشاء حساب</button>
+      <button id="resetBtn" type="button" class="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800">نسيت كلمة المرور؟</button>
+    </div>
+    <p class="mt-6 text-xs leading-6 text-slate-500">لا تستخدم كلمة مرور تستعملها في خدمة أخرى. قد يُطلب منك تأكيد البريد الإلكتروني حسب إعدادات المشروع.</p>
+  </main>
+  <script type="module">
+    import { supabase, authConfigured } from "./auth-client.js";
+    const form = document.querySelector("#authForm");
+    const email = document.querySelector("#email");
+    const password = document.querySelector("#password");
+    const status = document.querySelector("#status");
+    const submitBtn = document.querySelector("#submitBtn");
+    const setStatus = (message, error = false) => {
+      status.textContent = message;
+      status.className = error ? "text-sm text-red-300" : "text-sm text-emerald-300";
+    };
+    if (!authConfigured) {
+      document.querySelector("#configWarning").classList.remove("hidden");
+      submitBtn.disabled = true;
+      document.querySelector("#signupBtn").disabled = true;
+      document.querySelector("#resetBtn").disabled = true;
+    } else {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) location.replace("./account.html");
+    }
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!authConfigured) return;
+      submitBtn.disabled = true;
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.value.trim(), password: password.value
+        });
+        if (error) throw error;
+        if (data.session) location.assign("./account.html");
+      } catch (error) {
+        setStatus(error.message || "تعذر تسجيل الدخول.", true);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+    document.querySelector("#signupBtn").addEventListener("click", async () => {
+      if (!authConfigured) return;
+      document.querySelector("#signupBtn").disabled = true;
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.value.trim(), password: password.value,
+          options: { emailRedirectTo: new URL("./account.html", location.href).href }
+        });
+        if (error) throw error;
+        setStatus(data.session
+          ? "تم إنشاء الحساب. جارٍ فتح صفحة الحساب…"
+          : "إذا كان البريد صالحًا، ستصلك رسالة لتأكيد الحساب.");
+        if (data.session) location.assign("./account.html");
+      } catch (error) {
+        setStatus(error.message || "تعذر إنشاء الحساب.", true);
+      } finally {
+        document.querySelector("#signupBtn").disabled = false;
+      }
+    });
+    document.querySelector("#resetBtn").addEventListener("click", async () => {
+      if (!authConfigured) return;
+      if (!email.value.trim()) {
+        setStatus("أدخل بريدك الإلكتروني أولًا.", true);
+        return;
+      }
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.value.trim(), {
+          redirectTo: new URL("./account.html", location.href).href
+        });
+        if (error) throw error;
+        setStatus("إذا كان البريد مسجلًا، فستصلك تعليمات استعادة كلمة المرور.");
+      } catch (error) {
+        setStatus(error.message || "تعذر إرسال رسالة الاستعادة.", true);
+      }
+    });
+  </script>
+</body>
+</html>
