@@ -1,0 +1,84 @@
+name: Deploy static site to Hostinger
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hostinger-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.HOSTINGER_DEPLOY_ENABLED == 'true'
+    name: Deploy over verified FTPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate deployment configuration and site files
+        shell: bash
+        env:
+          HOSTINGER_FTP_SERVER: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          HOSTINGER_FTP_USERNAME: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          HOSTINGER_FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          HOSTINGER_FTP_SERVER_DIR: ${{ vars.HOSTINGER_FTP_SERVER_DIR }}
+        run: |
+          set -euo pipefail
+          for name in HOSTINGER_FTP_SERVER HOSTINGER_FTP_USERNAME HOSTINGER_FTP_PASSWORD HOSTINGER_FTP_SERVER_DIR; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing GitHub production environment secret/variable: $name"
+              exit 1
+            fi
+          done
+          if [[ ! "$HOSTINGER_FTP_SERVER" =~ ^[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then
+            echo "::error::HOSTINGER_FTP_SERVER must be a hostname, optionally followed by a port."
+            exit 1
+          fi
+          if [[ ! "$HOSTINGER_FTP_SERVER_DIR" =~ ^/[A-Za-z0-9_./-]*/$ ]]; then
+            echo "::error::HOSTINGER_FTP_SERVER_DIR must be an absolute path using only letters, numbers, dot, underscore, slash, or hyphen, and end with /."
+            exit 1
+          fi
+          test -s index.html
+          test -s login.html
+          test -s account.html
+          echo "Deployment preflight passed; credentials are not printed."
+
+      - name: Install lftp
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends lftp
+
+      - name: Deploy static files over FTPS
+        shell: bash
+        env:
+          HOSTINGER_FTP_SERVER: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          HOSTINGER_FTP_USERNAME: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          HOSTINGER_FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          HOSTINGER_FTP_SERVER_DIR: ${{ vars.HOSTINGER_FTP_SERVER_DIR }}
+        run: |
+          set -euo pipefail
+          lftp -u "$HOSTINGER_FTP_USERNAME","$HOSTINGER_FTP_PASSWORD" "ftp://$HOSTINGER_FTP_SERVER" -e "
+            set cmd:fail-exit yes;
+            set ftp:ssl-force yes;
+            set ftp:ssl-protect-data yes;
+            set ssl:verify-certificate yes;
+            mirror --reverse --only-newer --verbose
+              --exclude-glob .git*
+              --exclude-glob .github*
+              --exclude-glob .gitignore
+              --exclude-glob README.md
+              --exclude-glob SECURITY.md
+              --exclude-glob scripts/
+              ./ $HOSTINGER_FTP_SERVER_DIR;
+            bye
+          "
