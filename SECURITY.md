@@ -35,6 +35,12 @@ Configure the AWS IAM OIDC provider for `https://token.actions.githubusercontent
 
 The workflow intentionally fails before deployment until all variables are configured and both `Dockerfile` and the ECS task-definition file exist. The current repository is static HTML and does not currently contain a Dockerfile or ECS task definition. Decide whether ECS is actually the target; for static hosting, a static deployment (for example, S3 + CloudFront or GitHub Pages) is simpler.
 
+## Supabase data access
+
+An example `public.profiles` table and owner-only RLS policies are provided in `supabase/schema.sql`. Review the schema for your data model before applying it in Supabase SQL Editor or migrations. RLS must be enabled on every exposed table; a policy on `profiles` does not protect other tables. Never grant browser users access to secrets or privileged service-role credentials.
+
+The repository includes static regression checks in `tests/auth-security.test.mjs`. These tests do not replace live integration tests against a configured Supabase project.
+
 ## Before production
 
 - Configure HTTPS and security headers at the hosting layer (CSP, HSTS, `X-Content-Type-Options`, `Referrer-Policy`, and an appropriate `frame-ancestors` policy).
