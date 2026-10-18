@@ -30,7 +30,7 @@
       <button id="signupBtn" type="button" class="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800">إنشاء حساب</button>
       <button id="resetBtn" type="button" class="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800">نسيت كلمة المرور؟</button>
     </div>
-    <p class="mt-6 text-xs leading-6 text-slate-500">لا تستخدم كلمة مرور تستعملها في خدمة أخرى. قد يُطلب منك تأكيد البريد الإلكتروني حسب إعدادات المشروع.</p>
+    <p class="mt-6 text-xs leading-6 text-slate-500">لا تستخدم كلمة مرور تستعملها في خدمة أخرى. يتطلب التسجيل تأكيد البريد الإلكتروني؛ يجب تفعيل Email Confirmations في إعدادات Supabase Auth.</p>
   </main>
   <script type="module">
     import { supabase, authConfigured } from "./auth-client.js";
