@@ -67,6 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           lftp -u "$HOSTINGER_FTP_USERNAME","$HOSTINGER_FTP_PASSWORD" "ftp://$HOSTINGER_FTP_SERVER" -e "
+            set cmd:fail-exit yes;
             set ftp:ssl-force yes;
             set ftp:ssl-protect-data yes;
             set ssl:verify-certificate yes;
